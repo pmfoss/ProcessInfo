@@ -1,0 +1,171 @@
+PerfQueryCounterData is part of the Windows Performance Counters API, which allows you to retrieve performance data from the system. Below is a simple example of how to use PerfQueryCounterData in a C++ application to query performance counter data.
+
+Make sure to include the necessary headers and link against the appropriate libraries when compiling your application.
+
+#include <windows.h>
+#include <pdh.h>
+#include <pdhmsg.h>
+#include <iostream>
+
+#pragma comment(lib, "pdh.lib")
+
+int main() {
+    PDH_STATUS status;
+    HQUERY hQuery;
+    HCOUNTER hCounter;
+    DWORD counterType;
+    PDH_FMT_COUNTERVALUE counterValue;
+
+    // Initialize the query
+    status = PdhOpenQuery(NULL, 0, &hQuery);
+    if (status != ERROR_SUCCESS) {
+        std::cerr << "PdhOpenQuery failed with status: " << status << std::endl;
+        return 1;
+    }
+
+    // Add a counter to the query (example: Processor Time)
+    status = PdhAddCounter(hQuery, L"\\Processor(_Total)\\% Processor Time", 0, &hCounter);
+    if (status != ERROR_SUCCESS) {
+        std::cerr << "PdhAddCounter failed with status: " << status << std::endl;
+        PdhCloseQuery(hQuery);
+        return 1;
+    }
+
+    // Collect the query data
+    status = PdhCollectQueryData(hQuery);
+    if (status != ERROR_SUCCESS) {
+        std::cerr << "PdhCollectQueryData failed with status: " << status << std::endl;
+        PdhCloseQuery(hQuery);
+        return 1;
+    }
+
+    // Wait a moment for new data to be available
+    Sleep(1000);
+
+    // Collect the data again
+    status = PdhCollectQueryData(hQuery);
+    if (status != ERROR_SUCCESS) {
+        std::cerr << "PdhCollectQueryData failed with status: " << status << std::endl;
+        PdhCloseQuery(hQuery);
+        return 1;
+    }
+
+    // Get the counter value
+    status = PdhGetFormattedCounterValue(hCounter, PDH_FMT_DOUBLE, &counterType, &counterValue);
+    if (status != ERROR_SUCCESS) {
+        std::cerr << "PdhGetFormattedCounterValue failed with status: " << status << std::endl;
+        PdhCloseQuery(hQuery);
+        return 1;
+    }
+
+    // Display the result
+    std::cout << "Processor Time: " << counterValue.doubleValue << "%" << std::endl;
+
+    // Clean up
+    PdhCloseQuery(hQuery);
+    return 0;
+}
+
+Explanation:
+
+    Initialization: The example opens a performance query using PdhOpenQuery.
+    Adding a Counter: It adds a counter for the total processor time using PdhAddCounter.
+    Collecting Data: It collects data with PdhCollectQueryData. A sleep is introduced to allow time for new data to be available.
+    Retrieving Data: It retrieves and formats the counter value using PdhGetFormattedCounterValue.
+    Output: Finally, it prints the processor time percentage to the console.
+    Cleanup: It closes the query to release resources.
+
+Note:
+
+Make sure to run your application with appropriate permissions, as querying certain performance counters may require elevated privileges. Also, ensure that the performance counter path used (in this case, \\Processor(_Total)\\% Processor Time) is valid on your system. You can use tools like Performance Monitor to explore available counters.
+
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Perflib\009
+
+https://learn.microsoft.com/en-us/windows/win32/api/pdh/nf-pdh-pdhaddenglishcountera
+
+#include <windows.h>
+#include <pdh.h>
+#include <pdhmsg.h>
+#include <iostream>
+#include <string>
+
+#pragma comment(lib, "pdh.lib")
+
+int main() {
+    PDH_STATUS status;
+    
+    HQUERY hQuery;HQUERY hQuery;
+    HCOUNTER hCounter;
+    DWORD counterType;
+    PDH_FMT_COUNTERVALUE counterValue;
+
+    // Specify the PID of the process you want to monitor
+    DWORD pid = 1234; // Change this to your target process ID
+
+    // Initialize the query
+    status = PdhOpenQuery(NULL, 0, &hQuery);
+    if (status != ERROR_SUCCESS) {
+        std::cerr << "PdhOpenQuery failed with status: " << status << std::endl;
+        return 1;
+    }
+
+    // Build the counter path for the specific PID
+    std::string counterPath = "\\Process(" + std::to_string(pid) + ")\\% Processor Time";
+    LPCWSTR counterPathW = std::wstring(counterPath.begin(), counterPath.end()).c_str();
+
+    // Add a counter to the query for the specified PID
+    status = PdhAddCounter(hQuery, counterPathW, 0, &hCounter);
+    if (status != ERROR_SUCCESS) {
+        std::cerr << "PdhAddCounter failed with status: " << status << std::endl;
+        PdhCloseQuery(hQuery);
+        return 1;
+    }
+
+    // Collect the query data
+    status = PdhCollectQueryData(hQuery);
+    if (status != ERROR_SUCCESS) {
+        std::cerr << "PdhCollectQueryData failed with status: " << status << std::endl;
+        PdhCloseQuery(hQuery);
+        return 1;
+    }
+
+    // Wait a moment for new data to be available
+    Sleep(1000);
+
+    // Collect the data again
+    status = PdhCollectQueryData(hQuery);
+    if (status != ERROR_SUCCESS) {
+        std::cerr << "PdhCollectQueryData failed with status: " << status << std::endl;
+        PdhCloseQuery(hQuery);
+        return 1;
+    }
+
+    // Get the counter value
+    status = PdhGetFormattedCounterValue(hCounter, PDH_FMT_DOUBLE, &counterType, &counterValue);
+    if (status != ERROR_SUCCESS) {
+        std::cerr << "PdhGetFormattedCounterValue failed with status: " << status << std::endl;
+        PdhCloseQuery(hQuery);
+        return 1;
+    }
+
+    // Display the result
+    std::cout << "CPU Usage for PID " << pid << ": " << counterValue.doubleValue << "%" << std::endl;
+
+    // Clean up
+    PdhCloseQuery(hQuery);
+    return 0;
+}
+
+Explanation:
+
+    PID Specification: You specify the PID of the process you want to monitor (e.g., 1234).
+    Counter Path: The counter path is constructed to target the specific process using \\Process(PID)\\% Processor Time.
+    Adding the Counter: The counter is added to the query.
+    Data Collection: The program collects and formats the data in the same way as before.
+    Output: It displays the CPU usage percentage for the specified PID.
+
+Note:
+
+    Ensure that the PID you provide is valid and that the process is currently running; otherwise, the counter will not return valid data.
+    You may need to run the application with sufficient privileges to access performance counters for certain processes.
+    This code will only work if the process with the specified PID is alive and has been running for a short period, as performance counters may not be available immediately after the process starts.
