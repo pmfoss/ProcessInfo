@@ -1,11 +1,10 @@
 SET(LIBRARY_SRC_FILES
-   AbstractProcessDataReader.cpp)
+   AbstractProcessInfoReader.cpp)
 
-message(STATUS "CMake: OS " ${CMAKE_SYSTEM_NAME})
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-   list(APPEND LIBRARY_SRC_FILES LinuxProcessDataReader.cpp)
+   list(APPEND LIBRARY_SRC_FILES LinuxProcessInfoReader.cpp)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-   list(APPEND LIBRARY_SRC_FILES WindowsProcessDataReader.cpp)
+   list(APPEND LIBRARY_SRC_FILES WindowsProcessInfoReader.cpp)
 endif()
 
-add_library(ProcessData STATIC ${LIBRARY_SRC_FILES})
+add_library(ProcessInfo STATIC ${LIBRARY_SRC_FILES})

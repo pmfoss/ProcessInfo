@@ -1,11 +1,14 @@
-#ifndef PROCESS_DATA_H
-#define PROCESS_DATA_H 1
+#ifndef PROCESS_INFO_H
+#define PROCESS_INFO_H 1
 
 #include <string>
 
 using pid_t = int;
 
-struct ProcessData
+// To read Memory and CPU data:
+// https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
+
+struct ProcessInfo
 {
     template<typename T>
     class Data
@@ -43,4 +46,4 @@ struct ProcessData
     Data<pid_t> mParentProcessID;
 };
 
-#endif /*PROCESS_DATA_H*/
+#endif /*PROCESS_INFO_H*/

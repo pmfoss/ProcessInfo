@@ -1,24 +1,24 @@
-#ifndef LINUX_PROCESS_DATA_READER_H
-#define LINUX_PROCESS_DATA_READER_H 1
+#ifndef LINUX_PROCESS_INFO_READER_H
+#define LINUX_PROCESS_INFO_READER_H 1
 
 #include <filesystem>
 #include <map>
 #include <vector>
 
-#include "AbstractProcessDataReader.h"
+#include "AbstractProcessInfoReader.h"
 
-class LinuxProcessDataReader : public AbstractProcessDataReader
+class LinuxProcessInfoReader : public AbstractProcessInfoReader
 {
      public:
-         LinuxProcessDataReader();
-         LinuxProcessDataReader(pid_t pProcessID);
+         LinuxProcessInfoReader();
+         LinuxProcessInfoReader(pid_t pProcessID);
          
-         bool updateData(ProcessData& pData) override;
+         bool readData(ProcessInfo& pData) override;
 
      private:
          double calculateCPULoad();
          clock_t calculateUpTime();
-         bool readCommandline(ProcessData& pData);
+         bool readCommandline(ProcessInfo& pData);
          bool readPIDStatusFile();
          bool readPIDStatFile();
 
@@ -30,4 +30,4 @@ class LinuxProcessDataReader : public AbstractProcessDataReader
          std::map<std::string, std::string> mStatusFileData;
 };
 
-#endif /*LINUX_PROCESS_DATA_READER*/
+#endif /*LINUX_PROCESS_INFO_READER*/

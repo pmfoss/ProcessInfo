@@ -1,7 +1,7 @@
-#include "AbstractProcessDataReader.h"
+#include "AbstractProcessInfoReader.h"
 
 /*public methods*/
-bool AbstractProcessDataReader::updateData(ProcessData& pData)
+bool AbstractProcessInfoReader::readData(ProcessInfo& pData)
 {
     pData.mProcessID = mProcessID;
 

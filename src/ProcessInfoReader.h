@@ -1,12 +1,12 @@
-#ifndef PROCESS_DATA_READER_H 
-#define PROCESS_DATA_READER_H 1
+#ifndef PROCESS_INFO_READER_H 
+#define PROCESS_INFO_READER_H 1
 
 #ifdef _WIN32
-#include <WindowsProcessDataReader.h>
-using ProcessDataReader = WindowsProcessDataReader;
+#include <WindowsProcessInfoReader.h>
+using ProcessInfoReader = WindowsProcessInfoReader;
 #else
-#include <LinuxProcessDataReader.h>
-using ProcessDataReader = LinuxProcessDataReader;
+#include <LinuxProcessInfoReader.h>
+using ProcessInfoReader = LinuxProcessInfoReader;
 #endif
 
 #endif /*PROCESS_DATA_READER*/

@@ -1,34 +1,34 @@
-#ifndef WINDOWS_PROCESS_DATA_READER_H
-#define WINDOWS_PROCESS_DATA_READER_H 1
+#ifndef WINDOWS_PROCESS_INFO_READER_H
+#define WINDOWS_PROCESS_INFO_READER_H 1
 
+#include <format>
 #include <map>
+#include <stdexcept>
 #include <string>
 
 #include <windows.h>
-#include <pdh.h>
-#include <pdhmsg.h>
 
-#include "AbstractProcessDataReader.h"
+#include "AbstractProcessInfoReader.h"
 
-#pragma comment(lib, "pdh.lib")
-
-class WindowsProcessDataReader : public AbstractProcessDataReader
+class WindowsProcessInfoReader : public AbstractProcessInfoReader
 {
     public:
-        WindowsProcessDataReader();
-        WindowsProcessDataReader(pid_t pProcessID);
-        ~WindowsProcessDataReader() override;
+        WindowsProcessInfoReader();
+        WindowsProcessInfoReader(pid_t pProcessID);
     
-        bool updateData(ProcessData& pData) override;
+        bool readData(ProcessInfo& pData) override;
 
     private:
-        bool getMemoryData(HANDLE pProcess, ProcessData& pData);
+        double calculateCPULoad(HANDLE pProcess);
         HANDLE getProcessHandle() const;
-        void initPdhCounters();
-        void initPdhQuery();
-        HQUERY mPdhQuery;
-        std::map<std::string, HCOUNTER> mPdhCounterMap;
+        bool readCommandLine(HANDLE pProcess, ProcessInfo& pData);
+        bool readMemoryData(HANDLE pProcess, ProcessInfo& pData);
+        bool readParentProcessID(HANDLE pProcess, ProcessInfo& pData);
 
+        ULARGE_INTEGER mLastCPUTime;
+        ULARGE_INTEGER mLastSysCPUTime;
+        ULARGE_INTEGER mLastUserCPUTime;
+        int mProcessorCount;
 };
 
-#endif /*WINDOWS_PROCESS_DATA_READER_H*/
+#endif /*WINDOWS_PROCESS_INFO_READER_H*/

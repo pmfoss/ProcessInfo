@@ -1,52 +1,138 @@
-#include "WindowsProcessDataReader.h"
+#include "WindowsProcessInfoReader.h"
 
 #include <psapi.h>
-#include <iostream>
+#include <stringapiset.h>
 
-#include "PdhException.h"
+#include "WindowsNtApi.h"
 
 /*constructor / destructor*/
-WindowsProcessDataReader::WindowsProcessDataReader()
-    : WindowsProcessDataReader(GetCurrentProcessId())
+WindowsProcessInfoReader::WindowsProcessInfoReader()
+    : WindowsProcessInfoReader(GetCurrentProcessId())
 {
 }
 
-WindowsProcessDataReader::WindowsProcessDataReader(pid_t pProcessID)
-    : AbstractProcessDataReader(pProcessID)
+WindowsProcessInfoReader::WindowsProcessInfoReader(pid_t pProcessID)
+    : AbstractProcessInfoReader(pProcessID)
 {
-    initPdhCounters();
-    initPdhQuery();
-}
+    HANDLE lProcess = getProcessHandle();
 
-WindowsProcessDataReader::~WindowsProcessDataReader()
-{
-    PdhCloseQuery(mPdhQuery);
+    if(lProcess)
+    {
+        calculateCPULoad(lProcess);
+        CloseHandle(lProcess);
+    }
+    else
+    {
+        throw std::runtime_error(std::format("Process with ID \"{}\" can not be used", pProcessID));
+    }
+
+    SYSTEM_INFO lSysInfo;
+
+    GetSystemInfo(&lSysInfo);
+
+    mProcessorCount = lSysInfo.dwNumberOfProcessors;
 }
 
 /*public methods*/
-bool WindowsProcessDataReader::updateData(ProcessData& pData)
+bool WindowsProcessInfoReader::readData(ProcessInfo& pData)
 {
     HANDLE lProcess = getProcessHandle();
     bool lRetval = false; 
     
-    if(lProcess != NULL)
+    if(lProcess)
     {
-        lRetval = getMemoryData(lProcess, pData);
-    }
+        lRetval = AbstractProcessInfoReader::readData(pData);
+        lRetval &= readMemoryData(lProcess, pData);
+        lRetval &= readCommandLine(lProcess, pData);
+        lRetval &= readParentProcessID(lProcess, pData);
 
-    PDH_STATUS lStatus = PdhCollectQueryData(mPdhQuery);
-    
-    if(lStatus != ERROR_SUCCESS)
-    {
-        std::cout << "query failed\n";
-        return false;
+        pData.mCPULoad = calculateCPULoad(lProcess);
+
+        CloseHandle(lProcess);
     }
 
     return lRetval;
 }
 
 /*private methods*/
-bool WindowsProcessDataReader::getMemoryData(HANDLE pProcess, ProcessData& pData)
+double WindowsProcessInfoReader::calculateCPULoad(HANDLE pProcess)
+{
+    double lRetval = 0.0;
+    FILETIME lFTime, lFSysTime, lFUserTime;
+    ULARGE_INTEGER lNowTime, lSysTime, lUserTime;
+
+    GetSystemTimeAsFileTime(&lFTime);
+    std::memcpy(&lNowTime, &lFTime, sizeof(FILETIME));
+
+    GetProcessTimes(pProcess, &lFTime, &lFTime, &lFSysTime, &lFUserTime);
+    std::memcpy(&lUserTime, &lFUserTime, sizeof(FILETIME));
+    std::memcpy(&lSysTime, &lFSysTime, sizeof(FILETIME));
+
+    lRetval = (lSysTime.QuadPart - mLastSysCPUTime.QuadPart) +
+              (lUserTime.QuadPart - mLastUserCPUTime.QuadPart);
+    lRetval /= (lNowTime.QuadPart - mLastCPUTime.QuadPart);
+    lRetval /= mProcessorCount;
+
+    mLastCPUTime = lNowTime;
+    mLastSysCPUTime = lSysTime;
+    mLastUserCPUTime = lUserTime;
+
+    return lRetval * 100.0;
+}
+
+HANDLE WindowsProcessInfoReader::getProcessHandle() const
+{
+    if(mProcessID == GetCurrentProcessId())
+    {
+        return GetCurrentProcess();
+    }
+    
+    return OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, mProcessID);
+}
+
+bool WindowsProcessInfoReader::readCommandLine(HANDLE pProcess, ProcessInfo& pData)
+{
+    pData.mCmdLine = "";
+
+    UNICODE_STRING *lCommandLineBuffer;
+    ULONG lBufferSize = 0;
+
+    lBufferSize = sizeof(UNICODE_STRING) + MAX_PATH;
+    lCommandLineBuffer = static_cast<UNICODE_STRING*>(std::malloc(lBufferSize));
+
+    NTSTATUS lStatus = NtQueryInformationProcess(pProcess, ProcessCommandLineInformation, lCommandLineBuffer, lBufferSize, &lBufferSize);
+
+    if(lStatus != STATUS_INFO_LENGTH_MISMATCH)
+    {
+        std::free(lCommandLineBuffer);
+        lCommandLineBuffer = static_cast<UNICODE_STRING*>(std::malloc(lBufferSize));
+        lStatus = NtQueryInformationProcess(pProcess, ProcessCommandLineInformation, lCommandLineBuffer, lBufferSize, &lBufferSize);
+
+        if(lStatus != STATUS_SUCESS)
+        {
+            pData.mCmdLine = "";
+            return false;
+        }
+    }
+    else
+    {
+        pData.mCmdLine = "";
+        return false;
+    }
+
+    int lStrLen = WideCharToMultiByte(CP_UTF8, 0, lCommandLineBuffer->Buffer, lCommandLineBuffer->Length, NULL, 0, NULL, NULL) + 1;
+    char* lMbString = static_cast<char*>(std::calloc(lStrLen, sizeof(char)));
+    WideCharToMultiByte(CP_UTF8, 0, lCommandLineBuffer->Buffer, -1, lMbString, lStrLen, NULL, NULL);
+
+    pData.mCmdLine = lMbString;
+
+    std::free(lMbString);
+    std::free(lCommandLineBuffer);
+
+    return true;
+}
+
+bool WindowsProcessInfoReader::readMemoryData(HANDLE pProcess, ProcessInfo& pData)
 {
     PROCESS_MEMORY_COUNTERS_EX2 lProcMemCounters;
 
@@ -55,56 +141,41 @@ bool WindowsProcessDataReader::getMemoryData(HANDLE pProcess, ProcessData& pData
         pData.mMemoryResident = lProcMemCounters.WorkingSetSize;
         pData.mMemorySwapped = lProcMemCounters.PagefileUsage;
     }
+    else
+    {
+        return false;
+    }
     
     MEMORY_BASIC_INFORMATION lProcMemBaseInfo;
-    
-    if(VirtualQueryEx(pProcess, nullptr, &lProcMemBaseInfo, sizeof(lProcMemBaseInfo)))
+    SIZE_T lProcAddress = 0;
+    SIZE_T lProcVirtualSize = 0;
+
+    while(VirtualQueryEx(pProcess, reinterpret_cast<LPCVOID>(lProcAddress), &lProcMemBaseInfo, sizeof(lProcMemBaseInfo)))
     {
-        pData.mMemoryVirtual = lProcMemBaseInfo.RegionSize;
-        return true;
-    }
-
-    return false;
-}
-
-HANDLE WindowsProcessDataReader::getProcessHandle() const
-{
-    if(mProcessID == GetCurrentProcessId())
-    {
-        return GetCurrentProcess();
-    }
-    
-    return OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, mProcessID);
-}
-
-void WindowsProcessDataReader::initPdhCounters()
-{
-    mPdhCounterMap.emplace("Virtual Bytes", HCOUNTER());
-    mPdhCounterMap.emplace("Working Set", HCOUNTER());
-    mPdhCounterMap.emplace("Page File Bytes", HCOUNTER());
-    mPdhCounterMap.emplace("% Processor Time", HCOUNTER());
-}
-
-void WindowsProcessDataReader::initPdhQuery()
-{
-    std::string lCounterBasePath = "\\Process(" + std::to_string(mProcessID) + ")\\";
-
-    PDH_STATUS lStatus = PdhOpenQuery(nullptr, 0, &mPdhQuery);
-    
-    if(lStatus != ERROR_SUCCESS)
-    {
-        throw PdhException(lStatus);
-    }
-
-    for(auto [lName, lCounter] : mPdhCounterMap)
-    {
-        std::string lCounterPath = lCounterBasePath + lName;
-
-        lStatus = PdhAddEnglishCounter(mPdhQuery, lCounterPath.c_str(), 0, &lCounter);
-
-        if(lStatus != ERROR_SUCCESS)
+        if(lProcMemBaseInfo.State == MEM_COMMIT or lProcMemBaseInfo.State == MEM_RESERVE)
         {
-            throw PdhException(lStatus);
+            lProcVirtualSize += lProcMemBaseInfo.RegionSize;
         }
+        lProcAddress += lProcMemBaseInfo.RegionSize;
     }
+
+    pData.mMemoryVirtual = lProcVirtualSize;
+
+    return true;
+}
+
+bool WindowsProcessInfoReader::readParentProcessID(HANDLE pProcess, ProcessInfo& pData)
+{
+    PROCESS_BASIC_INFORMATION lPbi;
+    ULONG lReturnLength;
+
+    NTSTATUS lStatus = NtQueryInformationProcess(pProcess, ProcessBasicInformation, &lPbi, sizeof(PROCESS_BASIC_INFORMATION), &lReturnLength);
+    if(lStatus != STATUS_SUCESS) 
+    {
+        return false;
+    }
+
+    pData.mParentProcessID = lPbi.InheritedFromUniqueProcessId;
+
+    return true;
 }

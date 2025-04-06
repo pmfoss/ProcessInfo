@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cstdlib>
-#include <ProcessData.h>
-#include <ProcessDataReader.h>
+#include <ProcessInfo.h>
+#include <ProcessInfoReader.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -10,8 +10,6 @@
 #include <unistd.h>
 #define sleep(seconds) usleep(seconds * 1'000'000)
 #endif
-
-//https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
 
 void fillData(int* pData, int pSize)
 {
@@ -35,12 +33,20 @@ int Sum(int *pData, int pSize)
 
 int main()
 {
-    ProcessData lData;
-    ProcessDataReader lProcessDataReader;
+    ProcessInfo lData;
+    ProcessInfoReader lProcessInfoReader(1041);
     int *lProcData;
     int lCurrentSize = 1'024'000;
 
-    lProcessDataReader.updateData(lData);
+    try
+    {
+       lProcessInfoReader.readData(lData);
+    }
+    catch(const std::exception& e)
+    {
+        std::cout << "Error: " << e.what() << std::endl;
+        return -1;
+    }
 
     lProcData = static_cast<int *>(malloc(lCurrentSize * sizeof(int)));
     fillData(lProcData, lCurrentSize);
@@ -61,7 +67,7 @@ int main()
         lProcData = static_cast<int *>(realloc(lProcData, lCurrentSize * sizeof(int)));
         fillData(lProcData, lCurrentSize);
 
-        bool lRes = lProcessDataReader.updateData(lData);
+        bool lRes = lProcessInfoReader.readData(lData);
         std::cout << "size (" << i << "): " << lCurrentSize << " " << lRes << "\n";
         std::cout << "memory:\n";
         std::cout << "   total: " << lData.mMemoryVirtual() << "\n";
@@ -77,7 +83,7 @@ int main()
         lProcData = static_cast<int *>(realloc(lProcData, lCurrentSize * sizeof(int)));
         fillData(lProcData, lCurrentSize);
 
-        lProcessDataReader.updateData(lData);
+        lProcessInfoReader.readData(lData);
         std::cout << "size (" << i << "): " << lCurrentSize << "\n";
         std::cout << "memory:\n";
         std::cout << "   total: " << lData.mMemoryVirtual() << "\n";

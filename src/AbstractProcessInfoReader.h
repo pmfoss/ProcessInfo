@@ -1,31 +1,31 @@
-#ifndef ABSTRACT_PROCESS_DATA_READER_H
-#define ABSTRACT_PROCESS_DATA_READER_H 1
+#ifndef ABSTRACT_PROCESS_INFO_READER_H
+#define ABSTRACT_PROCESS_INFO_READER_H 1
 
-#include "ProcessData.h"
+#include "ProcessInfo.h"
 
-class AbstractProcessDataReader
+class AbstractProcessInfoReader
 {
     public:
-        AbstractProcessDataReader() = default;
-        constexpr AbstractProcessDataReader(pid_t pProcessID);
-        virtual ~AbstractProcessDataReader() {};
+        AbstractProcessInfoReader() = default;
+        constexpr AbstractProcessInfoReader(pid_t pProcessID);
+        virtual ~AbstractProcessInfoReader() {};
 
         constexpr pid_t getProcessID() const; 
 
-        virtual bool updateData(ProcessData& pData);
+        virtual bool readData(ProcessInfo& pData);
 
     protected:
         int32_t mProcessID = -1;
 };
 
 /*constructor*/
-constexpr AbstractProcessDataReader::AbstractProcessDataReader(pid_t pProcessID)
+constexpr AbstractProcessInfoReader::AbstractProcessInfoReader(pid_t pProcessID)
     : mProcessID(pProcessID)
 {
 }
 
 /*public methods*/
-constexpr pid_t AbstractProcessDataReader::getProcessID() const
+constexpr pid_t AbstractProcessInfoReader::getProcessID() const
 {
     return mProcessID;
 }
