@@ -1,4 +1,0 @@
-X:/ProcessData/build/CMakeFiles/ALL_BUILD.dir
-X:/ProcessData/build/CMakeFiles/ZERO_CHECK.dir
-X:/ProcessData/build/src/CMakeFiles/ProcessData.dir
-X:/ProcessData/build/examples/CMakeFiles/SimpleExample.dir
