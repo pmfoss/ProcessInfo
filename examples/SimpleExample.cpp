@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cstdlib>
-#include <ProcessInfo.h>
-#include <ProcessInfoReader.h>
+#include <PIProcessInfo.h>
+#include <PIProcessInfoReader.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -33,8 +33,8 @@ int Sum(int *pData, int pSize)
 
 int main()
 {
-    ProcessInfo lData;
-    ProcessInfoReader lProcessInfoReader(1041);
+    ProcessInfo::PIProcessInfo lData;
+    ProcessInfo::PIProcessInfoReader lProcessInfoReader(1041);
     int *lProcData;
     int lCurrentSize = 1'024'000;
 

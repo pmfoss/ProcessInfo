@@ -1,18 +1,20 @@
-#include "WindowsProcessInfoReader.h"
+#include "PIWindowsProcessInfoReader.h"
 
 #include <psapi.h>
 #include <stringapiset.h>
 
 #include "WindowsNtApi.h"
 
+using namespace ProcessInfo;
+
 /*constructor / destructor*/
-WindowsProcessInfoReader::WindowsProcessInfoReader()
-    : WindowsProcessInfoReader(GetCurrentProcessId())
+PIWindowsProcessInfoReader::PIWindowsProcessInfoReader()
+    : PIWindowsProcessInfoReader(GetCurrentProcessId())
 {
 }
 
-WindowsProcessInfoReader::WindowsProcessInfoReader(pid_t pProcessID)
-    : AbstractProcessInfoReader(pProcessID)
+PIWindowsProcessInfoReader::PIWindowsProcessInfoReader(pid_t pProcessID)
+    : PIAbstractProcessInfoReader(pProcessID)
 {
     HANDLE lProcess = getProcessHandle();
 
@@ -34,14 +36,14 @@ WindowsProcessInfoReader::WindowsProcessInfoReader(pid_t pProcessID)
 }
 
 /*public methods*/
-bool WindowsProcessInfoReader::readData(ProcessInfo& pData)
+bool PIWindowsProcessInfoReader::readData(PIProcessInfo& pData)
 {
     HANDLE lProcess = getProcessHandle();
     bool lRetval = false; 
     
     if(lProcess)
     {
-        lRetval = AbstractProcessInfoReader::readData(pData);
+        lRetval = ProcessInfo::PIAbstractProcessInfoReader::readData(pData);
         lRetval &= readMemoryData(lProcess, pData);
         lRetval &= readCommandLine(lProcess, pData);
         lRetval &= readParentProcessID(lProcess, pData);
@@ -55,7 +57,7 @@ bool WindowsProcessInfoReader::readData(ProcessInfo& pData)
 }
 
 /*private methods*/
-double WindowsProcessInfoReader::calculateCPULoad(HANDLE pProcess)
+double PIWindowsProcessInfoReader::calculateCPULoad(HANDLE pProcess)
 {
     double lRetval = 0.0;
     FILETIME lFTime, lFSysTime, lFUserTime;
@@ -80,7 +82,7 @@ double WindowsProcessInfoReader::calculateCPULoad(HANDLE pProcess)
     return lRetval * 100.0;
 }
 
-HANDLE WindowsProcessInfoReader::getProcessHandle() const
+HANDLE PIWindowsProcessInfoReader::getProcessHandle() const
 {
     if(mProcessID == GetCurrentProcessId())
     {
@@ -90,7 +92,7 @@ HANDLE WindowsProcessInfoReader::getProcessHandle() const
     return OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, mProcessID);
 }
 
-bool WindowsProcessInfoReader::readCommandLine(HANDLE pProcess, ProcessInfo& pData)
+bool PIWindowsProcessInfoReader::readCommandLine(HANDLE pProcess, PIProcessInfo& pData)
 {
     pData.mCmdLine = "";
 
@@ -132,7 +134,7 @@ bool WindowsProcessInfoReader::readCommandLine(HANDLE pProcess, ProcessInfo& pDa
     return true;
 }
 
-bool WindowsProcessInfoReader::readMemoryData(HANDLE pProcess, ProcessInfo& pData)
+bool PIWindowsProcessInfoReader::readMemoryData(HANDLE pProcess, PIProcessInfo& pData)
 {
     PROCESS_MEMORY_COUNTERS_EX2 lProcMemCounters;
 
@@ -164,7 +166,7 @@ bool WindowsProcessInfoReader::readMemoryData(HANDLE pProcess, ProcessInfo& pDat
     return true;
 }
 
-bool WindowsProcessInfoReader::readParentProcessID(HANDLE pProcess, ProcessInfo& pData)
+bool PIWindowsProcessInfoReader::readParentProcessID(HANDLE pProcess, PIProcessInfo& pData)
 {
     PROCESS_BASIC_INFORMATION lPbi;
     ULONG lReturnLength;

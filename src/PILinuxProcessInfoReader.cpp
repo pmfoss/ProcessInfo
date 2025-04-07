@@ -1,4 +1,4 @@
-#include "LinuxProcessInfoReader.h"
+#include "PILinuxProcessInfoReader.h"
 
 #include <filesystem>
 #include <fstream>
@@ -8,13 +8,13 @@
 #include <unistd.h>
 
 /*constructor / destructor*/
-LinuxProcessInfoReader::LinuxProcessInfoReader()
-    : LinuxProcessInfoReader(getpid())
+PILinuxProcessInfoReader::PILinuxProcessInfoReader()
+    : PILinuxProcessInfoReader(getpid())
 {
 }
 
-LinuxProcessInfoReader::LinuxProcessInfoReader(pid_t pProcessID)
-    : AbstractProcessInfoReader(pProcessID)
+PILinuxProcessInfoReader::PILinuxProcessInfoReader(pid_t pProcessID)
+    : ProcessInfo::AbstractProcessInfoReader(pProcessID)
 {
     mProcessProcRoot = "/proc/" + std::to_string(mProcessID);
 
@@ -28,12 +28,12 @@ LinuxProcessInfoReader::LinuxProcessInfoReader(pid_t pProcessID)
 }
 
 /*public methods*/
-bool LinuxProcessInfoReader::readData(ProcessInfo& pData)
+bool PILinuxProcessInfoReader::readData(PIProcessInfo& pData)
 {
     bool lRetval = readPIDStatusFile();
     
     lRetval &= readPIDStatFile();
-    lRetval &= AbstractProcessInfoReader::readData(pData);
+    lRetval &= ProcessInfo::PIAbstractProcessInfoReader::readData(pData);
     
     if(lRetval)
     {
@@ -52,7 +52,7 @@ bool LinuxProcessInfoReader::readData(ProcessInfo& pData)
 }
 
 /*private methods*/
-double LinuxProcessInfoReader::calculateCPULoad()
+double PILinuxProcessInfoReader::calculateCPULoad()
 {
     clock_t lCPUTicks = times(nullptr);
 
@@ -74,7 +74,7 @@ double LinuxProcessInfoReader::calculateCPULoad()
     return lRetval;
 }
 
-bool LinuxProcessInfoReader::readCommandline(ProcessInfo& pData)
+bool PILinuxProcessInfoReader::readCommandline(PIProcessInfo& pData)
 {
     std::filesystem::path lCmdLineFilePath = mProcessProcRoot / "cmdline";
     std::ifstream lInStream(lCmdLineFilePath);
@@ -94,7 +94,7 @@ bool LinuxProcessInfoReader::readCommandline(ProcessInfo& pData)
     return false;
 }
 
-bool LinuxProcessInfoReader::readPIDStatusFile()
+bool PILinuxProcessInfoReader::readPIDStatusFile()
 {
     std::filesystem::path lPIDStatusFilePath = mProcessProcRoot / "status";
 
@@ -134,7 +134,7 @@ bool LinuxProcessInfoReader::readPIDStatusFile()
     return false;
 }
 
-bool LinuxProcessInfoReader::readPIDStatFile()
+bool PILinuxProcessInfoReader::readPIDStatFile()
 {
     std::filesystem::path lPIDStatFilePath = mProcessProcRoot / "stat";
 
