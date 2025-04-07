@@ -70,8 +70,8 @@ double PIWindowsProcessInfoReader::calculateCPULoad(HANDLE pProcess)
     std::memcpy(&lUserTime, &lFUserTime, sizeof(FILETIME));
     std::memcpy(&lSysTime, &lFSysTime, sizeof(FILETIME));
 
-    lRetval = (lSysTime.QuadPart - mLastSysCPUTime.QuadPart) +
-              (lUserTime.QuadPart - mLastUserCPUTime.QuadPart);
+    lRetval = static_cast<double>((lSysTime.QuadPart - mLastSysCPUTime.QuadPart) +
+              (lUserTime.QuadPart - mLastUserCPUTime.QuadPart));
     lRetval /= (lNowTime.QuadPart - mLastCPUTime.QuadPart);
     lRetval /= mProcessorCount;
 
@@ -177,7 +177,7 @@ bool PIWindowsProcessInfoReader::readParentProcessID(HANDLE pProcess, PIProcessI
         return false;
     }
 
-    pData.mParentProcessID = lPbi.InheritedFromUniqueProcessId;
+    pData.mParentProcessID = static_cast<pid_t>(lPbi.InheritedFromUniqueProcessId);
 
     return true;
 }
