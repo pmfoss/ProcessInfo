@@ -112,12 +112,14 @@ bool PIWindowsProcessInfoReader::readCommandLine(HANDLE pProcess, PIProcessInfo&
 
         if(lStatus != STATUS_SUCESS)
         {
+			std::free(lCommandLineBuffer);
             pData.mCmdLine = "";
             return false;
         }
     }
     else
     {
+		std::free(lCommandLineBuffer);
         pData.mCmdLine = "";
         return false;
     }
