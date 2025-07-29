@@ -13,9 +13,9 @@ namespace ProcessInfo
     {
          public:
              PILinuxProcessInfoReader();
-             PILinuxProcessInfoReader(pid_t pProcessID);
+             PILinuxProcessInfoReader(int64_t pProcessID);
              
-             bool readData(PIProcessInfo& pData) override;
+             bool readData(PIProcessInfo& pData, ReadMode pMode) override;
     
          private:
              double calculateCPULoad();

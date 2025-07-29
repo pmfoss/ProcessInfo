@@ -13,8 +13,8 @@ PILinuxProcessInfoReader::PILinuxProcessInfoReader()
 {
 }
 
-PILinuxProcessInfoReader::PILinuxProcessInfoReader(pid_t pProcessID)
-    : ProcessInfo::AbstractProcessInfoReader(pProcessID)
+PILinuxProcessInfoReader::PILinuxProcessInfoReader(int64_t pProcessID)
+    : AbstractProcessInfoReader(pProcessID)
 {
     mProcessProcRoot = "/proc/" + std::to_string(mProcessID);
 
@@ -28,25 +28,37 @@ PILinuxProcessInfoReader::PILinuxProcessInfoReader(pid_t pProcessID)
 }
 
 /*public methods*/
-bool PILinuxProcessInfoReader::readData(PIProcessInfo& pData)
+bool PILinuxProcessInfoReader::readData(PIProcessInfo& pData, ReadMode pMode)
 {
     bool lRetval = readPIDStatusFile();
-    
+     
     lRetval &= readPIDStatFile();
     lRetval &= ProcessInfo::PIAbstractProcessInfoReader::readData(pData);
     
     if(lRetval)
     {
-        pData.mMemoryVirtual = std::stoull(mStatusFileData["VmSize"]) * 1000;
-        pData.mMemoryResident = std::stoull(mStatusFileData["VmRSS"]) * 1000;
-        pData.mMemorySwapped = std::stoull(mStatusFileData["VmSwap"]) * 1000;
-        
-        pData.mParentProcessID = std::stoi(mStatusFileData["PPid"]);
+		if((pMode & ReadModeFlags::Memory) == ReadModeFlags::Memory)
+{       {
+            pData.mMemoryVirtual = std::stoull(mStatusFileData["VmSize"]) * 1000;
+            pData.mMemoryResident = std::stoull(mStatusFileData["VmRSS"]) * 1000;
+            pData.mMemorySwapped = std::stoull(mStatusFileData["VmSwap"]) * 1000;
+        }
+		
+		if((pMode & ReadModeFlags::ParentPID) == ReadModeFlags::ParentPID)
+        {     
+            pData.mParentProcessID = std::stoi(mStatusFileData["PPid"]);
+	    }		
 
-        pData.mCPULoad = calculateCPULoad();
+        if((pMode & ReadModeFlags::CPULoad) == ReadModeFlags::CPULoad)
+        { 
+            pData.mCPULoad = calculateCPULoad();
+		}	
     }
 
-    lRetval &= readCommandline(pData);
+    if((pMode & ReadModeFlags::Commandline) == ReadModeFlags::Commandline)
+    {   
+        lRetval &= readCommandline(pData);
+	}
 
     return lRetval;
 }

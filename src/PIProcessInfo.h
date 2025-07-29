@@ -23,10 +23,12 @@ namespace ProcessInfo
                     return mConfigured;
                 }
     
-                constexpr void operator=(const T& pData)
+                constexpr Data& operator=(const T& pData)
                 {
                     mData = pData;
                     mConfigured = true;
+
+                    return *this;
                 }
     
                 constexpr T operator()() const
@@ -44,8 +46,8 @@ namespace ProcessInfo
         Data<size_t> mMemoryResident;
         Data<size_t> mMemorySwapped;
         Data<size_t> mMemoryVirtual;
-        Data<pid_t> mProcessID;
-        Data<pid_t> mParentProcessID;
+        Data<int64_t> mProcessID;
+        Data<int64_t> mParentProcessID;
     };
 }
 

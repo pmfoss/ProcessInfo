@@ -40,7 +40,7 @@ int main()
 
     try
     {
-       lProcessInfoReader.readData(lData);
+       lProcessInfoReader.readAllData(lData);
     }
     catch(const std::exception& e)
     {
@@ -67,7 +67,7 @@ int main()
         lProcData = static_cast<int *>(realloc(lProcData, lCurrentSize * sizeof(int)));
         fillData(lProcData, lCurrentSize);
 
-        bool lRes = lProcessInfoReader.readData(lData);
+        bool lRes = lProcessInfoReader.readAllData(lData);
         std::cout << "size (" << i << "): " << lCurrentSize << " " << lRes << "\n";
         std::cout << "memory:\n";
         std::cout << "   total: " << lData.mMemoryVirtual() << "\n";
@@ -83,7 +83,7 @@ int main()
         lProcData = static_cast<int *>(realloc(lProcData, lCurrentSize * sizeof(int)));
         fillData(lProcData, lCurrentSize);
 
-        lProcessInfoReader.readData(lData);
+        lProcessInfoReader.readAllData(lData);
         std::cout << "size (" << i << "): " << lCurrentSize << "\n";
         std::cout << "memory:\n";
         std::cout << "   total: " << lData.mMemoryVirtual() << "\n";

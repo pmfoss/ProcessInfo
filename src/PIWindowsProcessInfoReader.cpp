@@ -3,6 +3,7 @@
 #include <psapi.h>
 #include <stringapiset.h>
 
+#include <fstream>
 #include "WindowsNtApi.h"
 
 using namespace ProcessInfo;
@@ -13,7 +14,7 @@ PIWindowsProcessInfoReader::PIWindowsProcessInfoReader()
 {
 }
 
-PIWindowsProcessInfoReader::PIWindowsProcessInfoReader(pid_t pProcessID)
+PIWindowsProcessInfoReader::PIWindowsProcessInfoReader(int64_t pProcessID)
     : PIAbstractProcessInfoReader(pProcessID)
 {
     HANDLE lProcess = getProcessHandle();
@@ -36,19 +37,34 @@ PIWindowsProcessInfoReader::PIWindowsProcessInfoReader(pid_t pProcessID)
 }
 
 /*public methods*/
-bool PIWindowsProcessInfoReader::readData(PIProcessInfo& pData)
+bool PIWindowsProcessInfoReader::readData(PIProcessInfo& pData, ReadMode pMode)
 {
     HANDLE lProcess = getProcessHandle();
     bool lRetval = false; 
     
     if(lProcess)
     {
-        lRetval = ProcessInfo::PIAbstractProcessInfoReader::readData(pData);
-        lRetval &= readMemoryData(lProcess, pData);
-        lRetval &= readCommandLine(lProcess, pData);
-        lRetval &= readParentProcessID(lProcess, pData);
+        lRetval = PIAbstractProcessInfoReader::readData(pData, pMode);
 
-        pData.mCPULoad = calculateCPULoad(lProcess);
+        if((pMode & ReadModeFlags::Commandline) == ReadModeFlags::Commandline)
+        {
+            lRetval &= readCommandLine(lProcess, pData);
+        }
+
+        if ((pMode & ReadModeFlags::CPULoad) == ReadModeFlags::CPULoad)
+        {
+            pData.mCPULoad = calculateCPULoad(lProcess);
+        }
+
+        if ((pMode & ReadModeFlags::Memory) == ReadModeFlags::Memory)
+        {
+            lRetval &= readMemoryData(lProcess, pData);
+        }
+
+        if((pMode & ReadModeFlags::ParentPID) == ReadModeFlags::ParentPID)
+        {
+            lRetval &= readParentProcessID(lProcess, pData);
+        }
 
         CloseHandle(lProcess);
     }

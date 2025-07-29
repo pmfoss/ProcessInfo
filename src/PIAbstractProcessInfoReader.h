@@ -8,26 +8,38 @@ namespace ProcessInfo
     class PIAbstractProcessInfoReader
     {
         public:
+            struct ReadModeFlags
+            {
+                static constexpr uint8_t Commandline = 1;
+                static constexpr uint8_t CPULoad = 2;
+                static constexpr uint8_t Memory = 4;
+                static constexpr uint8_t ParentPID = 8;
+                static constexpr uint8_t All = Commandline | CPULoad | Memory | ParentPID;
+            };
+
+            using ReadMode = uint8_t;
+
             PIAbstractProcessInfoReader() = default;
-            constexpr PIAbstractProcessInfoReader(pid_t pProcessID);
-            virtual ~PIAbstractProcessInfoReader() {};
+            constexpr PIAbstractProcessInfoReader(int64_t pProcessID);
+            virtual ~PIAbstractProcessInfoReader() = default;
     
-            constexpr pid_t getProcessID() const; 
-    
-            virtual bool readData(PIProcessInfo& pData);
+            constexpr int64_t getProcessID() const; 
+
+            bool readAllData(PIProcessInfo& pData);
+            virtual bool readData(PIProcessInfo& pData, ReadMode pMode);
     
         protected:
-            int32_t mProcessID = -1;
+            int64_t mProcessID = -1;
     };
     
     /*constructor*/
-    constexpr PIAbstractProcessInfoReader::PIAbstractProcessInfoReader(pid_t pProcessID)
+    constexpr PIAbstractProcessInfoReader::PIAbstractProcessInfoReader(int64_t pProcessID)
         : mProcessID(pProcessID)
     {
     }
     
     /*public methods*/
-    constexpr pid_t PIAbstractProcessInfoReader::getProcessID() const
+    constexpr int64_t PIAbstractProcessInfoReader::getProcessID() const
     {
         return mProcessID;
     }
