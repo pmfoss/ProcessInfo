@@ -12,8 +12,10 @@ namespace ProcessInfo
             {
                 static constexpr uint8_t Commandline = 1;
                 static constexpr uint8_t CPULoad = 2;
-                static constexpr uint8_t Memory = 4;
-                static constexpr uint8_t ParentPID = 8;
+                static constexpr uint8_t ParentPID = 4;
+				static constexpr uint8_t VirtualMemory = 8;
+				static constexpr uint8_t WorkingMemory = 16;
+				static constexpr uint8_t Memory = WorkingMemory | VirtualMemory;
                 static constexpr uint8_t All = Commandline | CPULoad | Memory | ParentPID;
             };
 

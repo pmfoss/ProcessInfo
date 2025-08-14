@@ -37,11 +37,15 @@ bool PILinuxProcessInfoReader::readData(PIProcessInfo& pData, ReadMode pMode)
     
     if(lRetval)
     {
-		if((pMode & ReadModeFlags::Memory) == ReadModeFlags::Memory)
+		if((pMode & ReadModeFlags::WorkingMemory) == ReadModeFlags::WorkingMemory)
 {       {
-            pData.mMemoryVirtual = std::stoull(mStatusFileData["VmSize"]) * 1000;
             pData.mMemoryResident = std::stoull(mStatusFileData["VmRSS"]) * 1000;
-            pData.mMemorySwapped = std::stoull(mStatusFileData["VmSwap"]) * 1000;
+			pData.mMemorySwapped = std::stoull(mStatusFileData["VmSwap"]) * 1000;
+        }
+
+        if((pMode & ReadModeFlags::VirtualMemory) == ReadModeFlags::VirtualMemory)
+		{
+            pData.mMemoryVirtual = std::stoull(mStatusFileData["VmSize"]) * 1000;   
         }
 		
 		if((pMode & ReadModeFlags::ParentPID) == ReadModeFlags::ParentPID)

@@ -40,42 +40,41 @@ PIWindowsProcessInfoReader::PIWindowsProcessInfoReader(int64_t pProcessID)
 bool PIWindowsProcessInfoReader::readData(PIProcessInfo& pData, ReadMode pMode)
 {
     HANDLE lProcess = getProcessHandle();
-    bool lRetval = false; 
+    bool lRetVal = false; 
     
     if(lProcess)
     {
-        lRetval = PIAbstractProcessInfoReader::readData(pData, pMode);
+        lRetVal = PIAbstractProcessInfoReader::readData(pData, pMode);
 
         if((pMode & ReadModeFlags::Commandline) == ReadModeFlags::Commandline)
         {
-            lRetval &= readCommandLine(lProcess, pData);
+            lRetVal &= readCommandLine(lProcess, pData);
         }
 
-        if ((pMode & ReadModeFlags::CPULoad) == ReadModeFlags::CPULoad)
+        if((pMode & ReadModeFlags::CPULoad) == ReadModeFlags::CPULoad)
         {
             pData.mCPULoad = calculateCPULoad(lProcess);
         }
 
-        if ((pMode & ReadModeFlags::Memory) == ReadModeFlags::Memory)
+        if((pMode & ReadModeFlags::Memory) != 0)
         {
-            lRetval &= readMemoryData(lProcess, pData);
+            lRetVal &= readMemoryData(lProcess, pData, pMode);
         }
 
         if((pMode & ReadModeFlags::ParentPID) == ReadModeFlags::ParentPID)
         {
-            lRetval &= readParentProcessID(lProcess, pData);
+            lRetVal &= readParentProcessID(lProcess, pData);
         }
 
         CloseHandle(lProcess);
     }
 
-    return lRetval;
+    return lRetVal;
 }
 
 /*private methods*/
 double PIWindowsProcessInfoReader::calculateCPULoad(HANDLE pProcess)
 {
-    double lRetval = 0.0;
     FILETIME lFTime, lFSysTime, lFUserTime;
     ULARGE_INTEGER lNowTime, lSysTime, lUserTime;
 
@@ -86,16 +85,16 @@ double PIWindowsProcessInfoReader::calculateCPULoad(HANDLE pProcess)
     std::memcpy(&lUserTime, &lFUserTime, sizeof(FILETIME));
     std::memcpy(&lSysTime, &lFSysTime, sizeof(FILETIME));
 
-    lRetval = static_cast<double>((lSysTime.QuadPart - mLastSysCPUTime.QuadPart) +
+    double lRetVal = static_cast<double>(lSysTime.QuadPart - mLastSysCPUTime.QuadPart +
               (lUserTime.QuadPart - mLastUserCPUTime.QuadPart));
-    lRetval /= (lNowTime.QuadPart - mLastCPUTime.QuadPart);
-    lRetval /= mProcessorCount;
+    lRetVal /= static_cast<double>(lNowTime.QuadPart - mLastCPUTime.QuadPart);
+    lRetVal /= mProcessorCount;
 
     mLastCPUTime = lNowTime;
     mLastSysCPUTime = lSysTime;
     mLastUserCPUTime = lUserTime;
 
-    return lRetval * 100.0;
+    return lRetVal * 100.0;
 }
 
 HANDLE PIWindowsProcessInfoReader::getProcessHandle() const
@@ -108,15 +107,14 @@ HANDLE PIWindowsProcessInfoReader::getProcessHandle() const
     return OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, mProcessID);
 }
 
-bool PIWindowsProcessInfoReader::readCommandLine(HANDLE pProcess, PIProcessInfo& pData)
+bool PIWindowsProcessInfoReader::readCommandLine(HANDLE pProcess, PIProcessInfo& pData) const
 {
     pData.mCmdLine = "";
 
-    UNICODE_STRING *lCommandLineBuffer;
     ULONG lBufferSize = 0;
 
     lBufferSize = sizeof(UNICODE_STRING) + MAX_PATH;
-    lCommandLineBuffer = static_cast<UNICODE_STRING*>(std::malloc(lBufferSize));
+    UNICODE_STRING* lCommandLineBuffer = static_cast<UNICODE_STRING*>(std::malloc(lBufferSize));
 
     NTSTATUS lStatus = NtQueryInformationProcess(pProcess, ProcessCommandLineInformation, lCommandLineBuffer, lBufferSize, &lBufferSize);
 
@@ -140,9 +138,9 @@ bool PIWindowsProcessInfoReader::readCommandLine(HANDLE pProcess, PIProcessInfo&
         return false;
     }
 
-    int lStrLen = WideCharToMultiByte(CP_UTF8, 0, lCommandLineBuffer->Buffer, lCommandLineBuffer->Length, NULL, 0, NULL, NULL) + 1;
+    int lStrLen = WideCharToMultiByte(CP_UTF8, 0, lCommandLineBuffer->Buffer, lCommandLineBuffer->Length, nullptr, 0, nullptr, nullptr) + 1;
     char* lMbString = static_cast<char*>(std::calloc(lStrLen, sizeof(char)));
-    WideCharToMultiByte(CP_UTF8, 0, lCommandLineBuffer->Buffer, -1, lMbString, lStrLen, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, lCommandLineBuffer->Buffer, -1, lMbString, lStrLen, nullptr, nullptr);
 
     pData.mCmdLine = lMbString;
 
@@ -152,39 +150,46 @@ bool PIWindowsProcessInfoReader::readCommandLine(HANDLE pProcess, PIProcessInfo&
     return true;
 }
 
-bool PIWindowsProcessInfoReader::readMemoryData(HANDLE pProcess, PIProcessInfo& pData)
+bool PIWindowsProcessInfoReader::readMemoryData(HANDLE pProcess, PIProcessInfo& pData, ReadMode pMode) const
 {
-    PROCESS_MEMORY_COUNTERS_EX2 lProcMemCounters;
-
-    if(GetProcessMemoryInfo(pProcess, (PROCESS_MEMORY_COUNTERS*)&lProcMemCounters, sizeof(lProcMemCounters)))
-    {
-        pData.mMemoryResident = lProcMemCounters.WorkingSetSize;
-        pData.mMemorySwapped = lProcMemCounters.PagefileUsage;
-    }
-    else
-    {
-        return false;
-    }
-    
-    MEMORY_BASIC_INFORMATION lProcMemBaseInfo;
-    SIZE_T lProcAddress = 0;
-    SIZE_T lProcVirtualSize = 0;
-
-    while(VirtualQueryEx(pProcess, reinterpret_cast<LPCVOID>(lProcAddress), &lProcMemBaseInfo, sizeof(lProcMemBaseInfo)))
-    {
-        if(lProcMemBaseInfo.State == MEM_COMMIT or lProcMemBaseInfo.State == MEM_RESERVE)
+	bool lRetVal = true;
+	
+    if((pMode & ReadModeFlags::WorkingMemory) == ReadModeFlags::WorkingMemory)
+	{	
+        PROCESS_MEMORY_COUNTERS_EX2 lProcMemCounters;
+        if(GetProcessMemoryInfo(pProcess, reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&lProcMemCounters), sizeof(lProcMemCounters)))
         {
-            lProcVirtualSize += lProcMemBaseInfo.RegionSize;
+            pData.mMemoryResident = lProcMemCounters.WorkingSetSize;
+            pData.mMemorySwapped = lProcMemCounters.PagefileUsage;
         }
-        lProcAddress += lProcMemBaseInfo.RegionSize;
-    }
+        else
+        {
+            lRetVal = false;
+        }
+	}
+    
+	if((pMode & ReadModeFlags::VirtualMemory) == ReadModeFlags::VirtualMemory)
+	{
+        MEMORY_BASIC_INFORMATION lProcMemBaseInfo;
+        SIZE_T lProcAddress = 0;
+        SIZE_T lProcVirtualSize = 0;
+	    
+        while(VirtualQueryEx(pProcess, reinterpret_cast<LPCVOID>(lProcAddress), &lProcMemBaseInfo, sizeof(lProcMemBaseInfo)))
+        {
+            if(lProcMemBaseInfo.State == MEM_COMMIT or lProcMemBaseInfo.State == MEM_RESERVE)
+            {
+                lProcVirtualSize += lProcMemBaseInfo.RegionSize;
+            }
+            lProcAddress += lProcMemBaseInfo.RegionSize;
+        }
+	    
+        pData.mMemoryVirtual = lProcVirtualSize;
+	}
 
-    pData.mMemoryVirtual = lProcVirtualSize;
-
-    return true;
+    return lRetVal;
 }
 
-bool PIWindowsProcessInfoReader::readParentProcessID(HANDLE pProcess, PIProcessInfo& pData)
+bool PIWindowsProcessInfoReader::readParentProcessID(HANDLE pProcess, PIProcessInfo& pData) const
 {
     PROCESS_BASIC_INFORMATION lPbi;
     ULONG lReturnLength;

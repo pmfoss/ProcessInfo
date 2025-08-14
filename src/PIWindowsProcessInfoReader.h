@@ -2,9 +2,6 @@
 #define PI_WINDOWS_PROCESS_INFO_READER_H 1
 
 #include <format>
-#include <map>
-#include <stdexcept>
-#include <string>
 
 #include <windows.h>
 
@@ -23,14 +20,14 @@ namespace ProcessInfo
         private:
             double calculateCPULoad(HANDLE pProcess);
             HANDLE getProcessHandle() const;
-            bool readCommandLine(HANDLE pProcess, PIProcessInfo& pData);
-            bool readMemoryData(HANDLE pProcess, PIProcessInfo& pData);
-            bool readParentProcessID(HANDLE pProcess, PIProcessInfo& pData);
+            bool readCommandLine(HANDLE pProcess, PIProcessInfo& pData) const;
+            bool readMemoryData(HANDLE pProcess, PIProcessInfo& pData, ReadMode pMode) const;
+            bool readParentProcessID(HANDLE pProcess, PIProcessInfo& pData) const;
     
             ULARGE_INTEGER mLastCPUTime;
             ULARGE_INTEGER mLastSysCPUTime;
             ULARGE_INTEGER mLastUserCPUTime;
-            int mProcessorCount;
+            uint32_t mProcessorCount;
     };
 	
 	using PIProcessInfoReader = PIWindowsProcessInfoReader;
