@@ -1,0 +1,8 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+
+Name: ProcessInfo
+Description: A platform-independent library for reading process data.
+Version: 1.0.0
+Libs: -L${libdir} -lProcessInfo
+Cflags: -I${prefix}/@INCLUDE_INSTALL_DIR@
